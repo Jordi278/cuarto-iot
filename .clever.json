@@ -1,0 +1,12 @@
+{
+  "apps": [
+    {
+      "app_id": "app_20ca814a-083f-4e9d-a973-5694e22262ab",
+      "org_id": "user_67060c40-4170-428f-b494-a823cfd527a9",
+      "deploy_url": "https://github.com/Jordi278/cuarto-iot.git",
+      "git_ssh_url": "https://github.com/Jordi278/cuarto-iot.git",
+      "name": "cuarto-iot",
+      "alias": "cuarto-iot"
+    }
+  ]
+}
