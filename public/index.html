@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuarto IoT</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f0f2f5; color: #222; }
+    header { background: #1a1a2e; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.2rem; }
+    .online { background: #16213e; padding: 6px 14px; border-radius: 20px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .card { background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .card-label { font-size: 12px; color: #888; margin-bottom: 8px; }
+    .card-value { font-size: 2rem; font-weight: 600; }
+    .card-unit { font-size: 1rem; font-weight: 400; color: #888; }
+    .card-status { font-size: 13px; margin-top: 6px; }
+    .green { color: #4caf50; }
+    .red { color: #f44336; }
+    .amber { color: #ff9800; }
+    .alert { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 10px 16px; margin-bottom: 1.5rem; font-size: 14px; color: #856404; display: none; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    @media(max-width: 600px){ .charts { grid-template-columns: 1fr; } }
+    .chart-card { background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .chart-title { font-size: 13px; color: #888; margin-bottom: 10px; }
+    .history { background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .history h3 { font-size: 14px; color: #888; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: #aaa; font-weight: 400; padding: 4px 8px 8px; border-bottom: 1px solid #f0f0f0; }
+    td { padding: 8px; border-bottom: 1px solid #f0f0f0; color: #444; }
+    .pill { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .pill-green { background: #e8f5e9; color: #2e7d32; }
+    .pill-red { background: #ffebee; color: #c62828; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🏠 Cuarto IoT — Monitor</h1>
+  <div class="online"><div class="dot"></div><span id="estado-conexion">Conectando...</span></div>
+</header>
+<div class="container">
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">🌡️ Temperatura</div>
+      <div class="card-value"><span id="v-temp">--</span><span class="card-unit"> °C</span></div>
+      <div class="card-status" id="s-temp">--</div>
+    </div>
+    <div class="card">
+      <div class="card-label">🚶 Movimiento</div>
+      <div class="card-value" style="font-size:1.3rem; padding-top:8px;" id="v-mov">--</div>
+      <div class="card-status" id="s-mov">--</div>
+    </div>
+    <div class="card">
+      <div class="card-label">⚡ Corriente</div>
+      <div class="card-value"><span id="v-corr">--</span><span class="card-unit"> A</span></div>
+      <div class="card-status" id="s-corr">--</div>
+    </div>
+    <div class="card">
+      <div class="card-label">💡 LED</div>
+      <div class="card-value" style="font-size:1.3rem; padding-top:8px;" id="v-led">--</div>
+      <div class="card-status" id="s-led">--</div>
+    </div>
+  </div>
+
+  <div class="alert" id="alerta">⚠️ Consumo alto — riesgo de sobrecarga.</div>
+
+  <div class="charts">
+    <div class="chart-card">
+      <div class="chart-title">Temperatura (últimas lecturas)</div>
+      <canvas id="chartTemp" height="150"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Corriente (últimas lecturas)</div>
+      <canvas id="chartCorr" height="150"></canvas>
+    </div>
+  </div>
+
+  <div class="history">
+    <h3>Historial reciente</h3>
+    <table>
+      <thead><tr><th>Hora</th><th>Temp.</th><th>Movimiento</th><th>Corriente</th><th>LED</th></tr></thead>
+      <tbody id="tabla-hist"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  const MAX = 10;
+  const labelsArr = [];
+  const tempArr = [];
+  const corrArr = [];
+
+  const ctxT = document.getElementById('chartTemp').getContext('2d');
+  const ctxC = document.getElementById('chartCorr').getContext('2d');
+
+  const chartTemp = new Chart(ctxT, {
+    type: 'line',
+    data: { labels: labelsArr, datasets: [{ label: 'Temp °C', data: tempArr, borderColor: '#ff9800', backgroundColor: '#ff980020', fill: true, tension: 0.4, pointRadius: 3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false } } }
+  });
+
+  const chartCorr = new Chart(ctxC, {
+    type: 'line',
+    data: { labels: labelsArr, datasets: [{ label: 'Corriente A', data: corrArr, borderColor: '#2196f3', backgroundColor: '#2196f320', fill: true, tension: 0.4, pointRadius: 3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  function hora(fecha) {
+    const d = new Date(fecha);
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0');
+  }
+
+  async function actualizar() {
+    try {
+      const r = await fetch('/api/datos/ultimo');
+      const d = await r.json();
+      if (!d.id) return;
+
+      document.getElementById('estado-conexion').textContent = 'ESP32 en línea';
+      document.getElementById('v-temp').textContent = parseFloat(d.temperatura).toFixed(1);
+      document.getElementById('s-temp').textContent = d.temperatura > 27 ? '🔥 Caluroso' : '✅ Normal';
+      document.getElementById('s-temp').className = 'card-status ' + (d.temperatura > 27 ? 'amber' : 'green');
+
+      document.getElementById('v-mov').textContent = d.movimiento ? '✅ Detectado' : '❌ Sin movimiento';
+      document.getElementById('v-mov').className = 'card-value ' + (d.movimiento ? 'green' : 'red');
+
+      document.getElementById('v-corr').textContent = parseFloat(d.corriente).toFixed(1);
+      const corrClass = d.corriente > 1.8 ? 'red' : d.corriente > 1.2 ? 'amber' : 'green';
+      document.getElementById('s-corr').textContent = d.corriente > 1.8 ? '🔴 Alto' : d.corriente > 1.2 ? '🟡 Moderado' : '🟢 Bajo';
+      document.getElementById('s-corr').className = 'card-status ' + corrClass;
+
+      document.getElementById('v-led').textContent = d.led ? '💡 Encendido' : '⚫ Apagado';
+      document.getElementById('v-led').className = 'card-value ' + (d.led ? 'green' : 'red');
+
+      document.getElementById('alerta').style.display = d.corriente > 1.8 ? 'block' : 'none';
+
+      const t = hora(d.fecha);
+      if (!labelsArr.includes(t)) {
+        labelsArr.push(t); tempArr.push(d.temperatura); corrArr.push(d.corriente);
+        if (labelsArr.length > MAX) { labelsArr.shift(); tempArr.shift(); corrArr.shift(); }
+        chartTemp.update(); chartCorr.update();
+      }
+    } catch(e) { document.getElementById('estado-conexion').textContent = 'Sin conexión'; }
+  }
+
+  async function cargarHistorial() {
+    try {
+      const r = await fetch('/api/datos/historial');
+      const rows = await r.json();
+      document.getElementById('tabla-hist').innerHTML = rows.map(d => `
+        <tr>
+          <td>${hora(d.fecha)}</td>
+          <td>${parseFloat(d.temperatura).toFixed(1)} °C</td>
+          <td><span class="pill ${d.movimiento ? 'pill-green':'pill-red'}">${d.movimiento ? 'Sí':'No'}</span></td>
+          <td>${parseFloat(d.corriente).toFixed(1)} A</td>
+          <td><span class="pill ${d.led ? 'pill-green':'pill-red'}">${d.led ? 'ON':'OFF'}</span></td>
+        </tr>`).join('');
+    } catch(e) {}
+  }
+
+  actualizar();
+  cargarHistorial();
+  setInterval(actualizar, 5000);
+  setInterval(cargarHistorial, 10000);
+</script>
+</body>
+</html>
