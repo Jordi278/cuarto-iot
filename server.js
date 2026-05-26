@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const mysql2 = require('mysql2');
 const cors = require('cors');
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -21,18 +20,21 @@ db.connect(err => {
   db.query(`CREATE TABLE IF NOT EXISTS lecturas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     temperatura FLOAT,
+    humedad FLOAT,
     movimiento BOOLEAN,
     corriente FLOAT,
+    luz FLOAT,
     led BOOLEAN,
+    abanico BOOLEAN,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`, err => { if(err) console.error(err); });
 });
 
 app.post('/api/datos', (req, res) => {
-  const { temperatura, movimiento, corriente, led } = req.body;
+  const { temperatura, humedad, movimiento, corriente, luz, led, abanico } = req.body;
   db.query(
-    'INSERT INTO lecturas (temperatura, movimiento, corriente, led) VALUES (?,?,?,?)',
-    [temperatura, movimiento, corriente, led],
+    'INSERT INTO lecturas (temperatura, humedad, movimiento, corriente, luz, led, abanico) VALUES (?,?,?,?,?,?,?)',
+    [temperatura, humedad ?? null, movimiento, corriente, luz ?? null, led ?? null, abanico ?? null],
     err => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ ok: true });
@@ -56,4 +58,4 @@ app.get('/api/datos/historial', (req, res) => {
 
 app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(Servidor corriendo en puerto ${PORT}));
