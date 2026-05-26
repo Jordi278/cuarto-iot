@@ -18,21 +18,31 @@ const db = mysql2.createConnection({
 db.connect(err => {
   if (err) { console.error('Error BD:', err.message); return; }
   console.log('Conectado a MySQL');
+
   db.query(`CREATE TABLE IF NOT EXISTS lecturas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     temperatura FLOAT,
+    humedad FLOAT,
     movimiento BOOLEAN,
     corriente FLOAT,
+    luz INT,
     led BOOLEAN,
+    abanico BOOLEAN,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`, err => { if(err) console.error(err); });
+  )`, err => {
+    if (err) { console.error(err); return; }
+    // Agregar columnas nuevas si la tabla ya existía
+    db.query(`ALTER TABLE lecturas ADD COLUMN IF NOT EXISTS humedad FLOAT AFTER temperatura`, err => { if(err && !err.message.includes('Duplicate')) console.error(err); });
+    db.query(`ALTER TABLE lecturas ADD COLUMN IF NOT EXISTS luz INT AFTER corriente`, err => { if(err && !err.message.includes('Duplicate')) console.error(err); });
+    db.query(`ALTER TABLE lecturas ADD COLUMN IF NOT EXISTS abanico BOOLEAN AFTER led`, err => { if(err && !err.message.includes('Duplicate')) console.error(err); });
+  });
 });
 
 app.post('/api/datos', (req, res) => {
-  const { temperatura, movimiento, corriente, led } = req.body;
+  const { temperatura, humedad, movimiento, corriente, luz, led, abanico } = req.body;
   db.query(
-    'INSERT INTO lecturas (temperatura, movimiento, corriente, led) VALUES (?,?,?,?)',
-    [temperatura, movimiento, corriente, led],
+    'INSERT INTO lecturas (temperatura, humedad, movimiento, corriente, luz, led, abanico) VALUES (?,?,?,?,?,?,?)',
+    [temperatura, humedad ?? null, movimiento, corriente, luz ?? null, led, abanico ?? null],
     err => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ ok: true });

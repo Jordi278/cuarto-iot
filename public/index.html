@@ -4,115 +4,185 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cuarto IoT</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #0d1117; --surface: #161b22; --surface2: #1c2333; --border: #30363d;
+      --text: #e6edf3; --muted: #7d8590; --green: #3fb950; --red: #f85149;
+      --amber: #d29922; --blue: #58a6ff;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #f0f2f5; color: #222; }
-    header { background: #1a1a2e; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    header h1 { font-size: 1.2rem; }
-    .online { background: #16213e; padding: 6px 14px; border-radius: 20px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; animation: pulse 1.5s infinite; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo h1 { font-family: 'Space Mono', monospace; font-size: 1rem; letter-spacing: -0.5px; }
+    .logo span { color: var(--blue); }
+    .status-pill { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; font-size: 12px; color: var(--muted); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    .dot.offline { background: var(--red); animation: none; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .card { background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
-    .card-label { font-size: 12px; color: #888; margin-bottom: 8px; }
-    .card-value { font-size: 2rem; font-weight: 600; }
-    .card-unit { font-size: 1rem; font-weight: 400; color: #888; }
-    .card-status { font-size: 13px; margin-top: 6px; }
-    .green { color: #4caf50; }
-    .red { color: #f44336; }
-    .amber { color: #ff9800; }
-    .alert { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 10px 16px; margin-bottom: 1.5rem; font-size: 14px; color: #856404; display: none; }
+    .alertas { padding: 1rem 2rem 0; display: flex; flex-direction: column; gap: 8px; }
+    .alerta { border-radius: 8px; padding: 10px 16px; font-size: 13px; display: none; align-items: center; gap: 10px; font-weight: 500; }
+    .alerta.show { display: flex; }
+    .alerta-warn { background: rgba(210,153,34,0.12); border: 1px solid rgba(210,153,34,0.4); color: #d29922; }
+    .alerta-critica { background: rgba(248,81,73,0.12); border: 1px solid rgba(248,81,73,0.4); color: #f85149; animation: blink 1.2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .container { max-width: 1100px; margin: 1.5rem auto; padding: 0 2rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; position: relative; overflow: hidden; transition: border-color 0.3s, transform 0.2s; }
+    .card:hover { border-color: var(--blue); transform: translateY(-2px); }
+    .card-glow { position: absolute; top: -10px; right: -10px; width: 70px; height: 70px; border-radius: 50%; filter: blur(25px); opacity: 0.2; pointer-events: none; }
+    .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .card-value { font-family: 'Space Mono', monospace; font-size: 2rem; font-weight: 700; }
+    .card-unit { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+    .card-status { font-size: 12px; margin-top: 8px; }
+    .val-green { color: var(--green); } .val-red { color: var(--red); }
+    .val-amber { color: var(--amber); } .val-blue { color: var(--blue); }
+    .dispositivos { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    @media(max-width:600px){ .dispositivos { grid-template-columns: 1fr; } }
+    .dispositivo { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.4rem; display: flex; align-items: center; justify-content: space-between; transition: border-color 0.3s; }
+    .dispositivo.activo { border-color: var(--green); }
+    .disp-left { display: flex; align-items: center; gap: 14px; }
+    .disp-icon { font-size: 2rem; }
+    .disp-nombre { font-size: 15px; font-weight: 600; }
+    .disp-badge { padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; font-family: 'Space Mono', monospace; }
+    .badge-on  { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.4); }
+    .badge-off { background: rgba(248,81,73,0.15); color: var(--red);   border: 1px solid rgba(248,81,73,0.4); }
     .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-    @media(max-width: 600px){ .charts { grid-template-columns: 1fr; } }
-    .chart-card { background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
-    .chart-title { font-size: 13px; color: #888; margin-bottom: 10px; }
-    .history { background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
-    .history h3 { font-size: 14px; color: #888; margin-bottom: 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: left; color: #aaa; font-weight: 400; padding: 4px 8px 8px; border-bottom: 1px solid #f0f0f0; }
-    td { padding: 8px; border-bottom: 1px solid #f0f0f0; color: #444; }
-    .pill { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .pill-green { background: #e8f5e9; color: #2e7d32; }
-    .pill-red { background: #ffebee; color: #c62828; }
+    @media(max-width:600px){ .charts { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; }
+    .chart-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+    .history { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; margin-bottom: 2rem; }
+    .history h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; color: var(--muted); font-weight: 400; padding: 4px 10px 10px; border-bottom: 1px solid var(--border); font-family: 'Space Mono', monospace; font-size: 10px; }
+    td { padding: 10px; border-bottom: 1px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; }
+    tr:last-child td { border-bottom: none; }
+    .pill { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+    .pill-green { background: rgba(63,185,80,0.15); color: var(--green); }
+    .pill-red   { background: rgba(248,81,73,0.15); color: var(--red); }
   </style>
 </head>
 <body>
 <header>
-  <h1>🏠 Cuarto IoT — Monitor</h1>
-  <div class="online"><div class="dot"></div><span id="estado-conexion">Conectando...</span></div>
+  <div class="logo">
+    <span style="font-size:1.4rem">🏠</span>
+    <h1>Cuarto <span>IoT</span> — Monitor</h1>
+  </div>
+  <div class="status-pill">
+    <div class="dot" id="dot"></div>
+    <span id="estado-conexion">Conectando...</span>
+  </div>
 </header>
+
+<div class="alertas">
+  <div class="alerta alerta-critica" id="alerta-corriente">🚨 <strong>Sobrecarga eléctrica</strong> — Corriente supera el límite.</div>
+  <div class="alerta alerta-warn"    id="alerta-temp">🌡️ <strong>Temperatura alta</strong> — Revisar ventilación.</div>
+  <div class="alerta alerta-warn"    id="alerta-hum">💧 <strong>Humedad alta</strong> — Revisar el cuarto.</div>
+</div>
+
 <div class="container">
+
   <div class="cards">
     <div class="card">
+      <div class="card-glow" style="background:#ff9800"></div>
       <div class="card-label">🌡️ Temperatura</div>
-      <div class="card-value"><span id="v-temp">--</span><span class="card-unit"> °C</span></div>
+      <div class="card-value" id="v-temp">--<span class="card-unit">°C</span></div>
       <div class="card-status" id="s-temp">--</div>
     </div>
     <div class="card">
+      <div class="card-glow" style="background:#2196f3"></div>
+      <div class="card-label">💧 Humedad</div>
+      <div class="card-value" id="v-hum">--<span class="card-unit">%</span></div>
+      <div class="card-status" id="s-hum">--</div>
+    </div>
+    <div class="card">
+      <div class="card-glow" style="background:#4caf50"></div>
       <div class="card-label">🚶 Movimiento</div>
-      <div class="card-value" style="font-size:1.3rem; padding-top:8px;" id="v-mov">--</div>
-      <div class="card-status" id="s-mov">--</div>
+      <div class="card-value" id="v-mov" style="font-size:1.2rem;padding-top:6px">--</div>
     </div>
     <div class="card">
+      <div class="card-glow" style="background:#f44336"></div>
       <div class="card-label">⚡ Corriente</div>
-      <div class="card-value"><span id="v-corr">--</span><span class="card-unit"> A</span></div>
+      <div class="card-value" id="v-corr">--<span class="card-unit">A</span></div>
       <div class="card-status" id="s-corr">--</div>
-    </div>
-    <div class="card">
-      <div class="card-label">💡 LED</div>
-      <div class="card-value" style="font-size:1.3rem; padding-top:8px;" id="v-led">--</div>
-      <div class="card-status" id="s-led">--</div>
     </div>
   </div>
 
-  <div class="alert" id="alerta">⚠️ Consumo alto — riesgo de sobrecarga.</div>
+  <div class="dispositivos">
+    <div class="dispositivo" id="card-luz">
+      <div class="disp-left">
+        <div class="disp-icon">💡</div>
+        <div class="disp-nombre">Luz</div>
+      </div>
+      <div class="disp-badge badge-off" id="badge-luz">OFF</div>
+    </div>
+    <div class="dispositivo" id="card-abanico">
+      <div class="disp-left">
+        <div class="disp-icon">🌀</div>
+        <div class="disp-nombre">Abanico</div>
+      </div>
+      <div class="disp-badge badge-off" id="badge-abanico">OFF</div>
+    </div>
+  </div>
 
   <div class="charts">
     <div class="chart-card">
-      <div class="chart-title">Temperatura (últimas lecturas)</div>
-      <canvas id="chartTemp" height="150"></canvas>
+      <div class="chart-title">🌡️ Temperatura</div>
+      <canvas id="chartTemp" height="140"></canvas>
     </div>
     <div class="chart-card">
-      <div class="chart-title">Corriente (últimas lecturas)</div>
-      <canvas id="chartCorr" height="150"></canvas>
+      <div class="chart-title">💧 Humedad %</div>
+      <canvas id="chartHum" height="140"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">⚡ Corriente</div>
+      <canvas id="chartCorr" height="140"></canvas>
     </div>
   </div>
 
   <div class="history">
     <h3>Historial reciente</h3>
     <table>
-      <thead><tr><th>Hora</th><th>Temp.</th><th>Movimiento</th><th>Corriente</th><th>LED</th></tr></thead>
+      <thead>
+        <tr><th>Hora</th><th>Temp</th><th>Humedad</th><th>Movimiento</th><th>Corriente</th><th>Luz</th><th>Abanico</th></tr>
+      </thead>
       <tbody id="tabla-hist"></tbody>
     </table>
   </div>
+
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-  const MAX = 10;
-  const labelsArr = [];
-  const tempArr = [];
-  const corrArr = [];
+  const MAX = 12;
+  const labels=[], tempArr=[], humArr=[], corrArr=[];
 
-  const ctxT = document.getElementById('chartTemp').getContext('2d');
-  const ctxC = document.getElementById('chartCorr').getContext('2d');
-
-  const chartTemp = new Chart(ctxT, {
+  const cfg = (color, data, yMax) => ({
     type: 'line',
-    data: { labels: labelsArr, datasets: [{ label: 'Temp °C', data: tempArr, borderColor: '#ff9800', backgroundColor: '#ff980020', fill: true, tension: 0.4, pointRadius: 3 }] },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false } } }
+    data: { labels, datasets: [{ data, borderColor: color, backgroundColor: color+'22', fill: true, tension: 0.4, pointRadius: 2, borderWidth: 2 }] },
+    options: { responsive: true, plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks:{color:'#7d8590',font:{size:9,family:'Space Mono'}}, grid:{color:'#21262d'} },
+        y: { beginAtZero: false, ...(yMax?{max:yMax}:{}), ticks:{color:'#7d8590',font:{size:9}}, grid:{color:'#21262d'} }
+      }
+    }
   });
 
-  const chartCorr = new Chart(ctxC, {
-    type: 'line',
-    data: { labels: labelsArr, datasets: [{ label: 'Corriente A', data: corrArr, borderColor: '#2196f3', backgroundColor: '#2196f320', fill: true, tension: 0.4, pointRadius: 3 }] },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-  });
+  const chartTemp = new Chart(document.getElementById('chartTemp').getContext('2d'), cfg('#ff9800', tempArr));
+  const chartHum  = new Chart(document.getElementById('chartHum').getContext('2d'),  cfg('#58a6ff', humArr, 100));
+  const chartCorr = new Chart(document.getElementById('chartCorr').getContext('2d'), cfg('#3fb950', corrArr));
 
-  function hora(fecha) {
-    const d = new Date(fecha);
-    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0');
+  function hora(f) {
+    const d = new Date(f);
+    return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  }
+
+  function setDispositivo(cardId, badgeId, on) {
+    document.getElementById(cardId).className = 'dispositivo' + (on ? ' activo' : '');
+    const b = document.getElementById(badgeId);
+    b.textContent = on ? 'ON' : 'OFF';
+    b.className = 'disp-badge ' + (on ? 'badge-on' : 'badge-off');
   }
 
   async function actualizar() {
@@ -122,30 +192,50 @@
       if (!d.id) return;
 
       document.getElementById('estado-conexion').textContent = 'ESP32 en línea';
-      document.getElementById('v-temp').textContent = parseFloat(d.temperatura).toFixed(1);
-      document.getElementById('s-temp').textContent = d.temperatura > 27 ? '🔥 Caluroso' : '✅ Normal';
-      document.getElementById('s-temp').className = 'card-status ' + (d.temperatura > 27 ? 'amber' : 'green');
+      document.getElementById('dot').className = 'dot';
 
+      // Temperatura
+      const temp = parseFloat(d.temperatura);
+      document.getElementById('v-temp').innerHTML = temp.toFixed(1) + '<span class="card-unit">°C</span>';
+      document.getElementById('v-temp').className = 'card-value ' + (temp > 35 ? 'val-red' : temp > 28 ? 'val-amber' : 'val-green');
+      document.getElementById('s-temp').textContent = temp > 35 ? '🔴 Muy caluroso' : temp > 28 ? '🟡 Caluroso' : '✅ Normal';
+
+      // Humedad
+      const hum = d.humedad != null ? parseFloat(d.humedad) : null;
+      document.getElementById('v-hum').innerHTML = hum != null ? hum.toFixed(1) + '<span class="card-unit">%</span>' : '--';
+      document.getElementById('v-hum').className = 'card-value ' + (hum > 80 ? 'val-red' : hum > 65 ? 'val-amber' : 'val-blue');
+      document.getElementById('s-hum').textContent = hum > 80 ? '🔴 Muy húmedo' : hum > 65 ? '🟡 Húmedo' : '✅ Normal';
+
+      // Movimiento
       document.getElementById('v-mov').textContent = d.movimiento ? '✅ Detectado' : '❌ Sin movimiento';
-      document.getElementById('v-mov').className = 'card-value ' + (d.movimiento ? 'green' : 'red');
+      document.getElementById('v-mov').className = 'card-value ' + (d.movimiento ? 'val-green' : 'val-red');
 
-      document.getElementById('v-corr').textContent = parseFloat(d.corriente).toFixed(1);
-      const corrClass = d.corriente > 1.8 ? 'red' : d.corriente > 1.2 ? 'amber' : 'green';
-      document.getElementById('s-corr').textContent = d.corriente > 1.8 ? '🔴 Alto' : d.corriente > 1.2 ? '🟡 Moderado' : '🟢 Bajo';
-      document.getElementById('s-corr').className = 'card-status ' + corrClass;
+      // Corriente
+      const corr = parseFloat(d.corriente);
+      document.getElementById('v-corr').innerHTML = corr.toFixed(2) + '<span class="card-unit">A</span>';
+      document.getElementById('v-corr').className = 'card-value ' + (corr > 4.5 ? 'val-red' : corr > 2.5 ? 'val-amber' : 'val-green');
+      document.getElementById('s-corr').textContent = corr > 4.5 ? '🔴 Sobrecarga' : corr > 2.5 ? '🟡 Moderado' : '🟢 Normal';
 
-      document.getElementById('v-led').textContent = d.led ? '💡 Encendido' : '⚫ Apagado';
-      document.getElementById('v-led').className = 'card-value ' + (d.led ? 'green' : 'red');
+      // Dispositivos — luz: led>20 ON, abanico: movimiento ON
+      setDispositivo('card-luz',     'badge-luz',     d.led > 20);
+      setDispositivo('card-abanico', 'badge-abanico', d.movimiento == 1);
 
-      document.getElementById('alerta').style.display = d.corriente > 1.8 ? 'block' : 'none';
+      // Alertas
+      document.getElementById('alerta-corriente').classList.toggle('show', corr > 4.5);
+      document.getElementById('alerta-temp').classList.toggle('show', temp > 35);
+      document.getElementById('alerta-hum').classList.toggle('show', hum > 80);
 
+      // Gráficas
       const t = hora(d.fecha);
-      if (!labelsArr.includes(t)) {
-        labelsArr.push(t); tempArr.push(d.temperatura); corrArr.push(d.corriente);
-        if (labelsArr.length > MAX) { labelsArr.shift(); tempArr.shift(); corrArr.shift(); }
-        chartTemp.update(); chartCorr.update();
+      if (!labels.includes(t)) {
+        labels.push(t); tempArr.push(temp); humArr.push(hum); corrArr.push(corr);
+        if (labels.length > MAX) { labels.shift(); tempArr.shift(); humArr.shift(); corrArr.shift(); }
+        chartTemp.update(); chartHum.update(); chartCorr.update();
       }
-    } catch(e) { document.getElementById('estado-conexion').textContent = 'Sin conexión'; }
+    } catch(e) {
+      document.getElementById('estado-conexion').textContent = 'Sin conexión';
+      document.getElementById('dot').className = 'dot offline';
+    }
   }
 
   async function cargarHistorial() {
@@ -155,10 +245,12 @@
       document.getElementById('tabla-hist').innerHTML = rows.map(d => `
         <tr>
           <td>${hora(d.fecha)}</td>
-          <td>${parseFloat(d.temperatura).toFixed(1)} °C</td>
-          <td><span class="pill ${d.movimiento ? 'pill-green':'pill-red'}">${d.movimiento ? 'Sí':'No'}</span></td>
-          <td>${parseFloat(d.corriente).toFixed(1)} A</td>
-          <td><span class="pill ${d.led ? 'pill-green':'pill-red'}">${d.led ? 'ON':'OFF'}</span></td>
+          <td>${parseFloat(d.temperatura).toFixed(1)}°C</td>
+          <td>${d.humedad != null ? parseFloat(d.humedad).toFixed(1)+'%' : '--'}</td>
+          <td><span class="pill ${d.movimiento?'pill-green':'pill-red'}">${d.movimiento?'Sí':'No'}</span></td>
+          <td>${parseFloat(d.corriente).toFixed(2)}A</td>
+          <td><span class="pill ${d.led>20?'pill-green':'pill-red'}">${d.led>20?'ON':'OFF'}</span></td>
+          <td><span class="pill ${d.movimiento?'pill-green':'pill-red'}">${d.movimiento?'ON':'OFF'}</span></td>
         </tr>`).join('');
     } catch(e) {}
   }
