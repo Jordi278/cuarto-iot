@@ -26,11 +26,15 @@ app.post('/api/datos', function(req, res) {
   var b = req.body;
   var temperatura = b.temperatura || null;
   var humedad = b.humedad || null;
-  var movimiento = b.movimiento || null;
+  var movimiento = b.movimiento !== undefined ? b.movimiento : null;
   var corriente = b.corriente || null;
   var luz = b.luz || null;
-  var led = b.led || null;
-  var abanico = b.abanico || null;
+
+  // LED encendido si luz > 0
+  var led = b.led !== undefined ? b.led : (luz !== null ? (luz > 0 ? 1 : 0) : null);
+  // Abanico encendido si hay movimiento
+  var abanico = b.abanico !== undefined ? b.abanico : (movimiento ? 1 : 0);
+
   db.query(
     'INSERT INTO lecturas (temperatura, humedad, movimiento, corriente, luz, led, abanico) VALUES (?,?,?,?,?,?,?)',
     [temperatura, humedad, movimiento, corriente, luz, led, abanico],
